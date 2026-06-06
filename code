@@ -1,0 +1,84 @@
+import time
+from IPython.display import clear_output
+import matplotlib.pyplot as plt
+
+class Task:
+    def __init__(self, name, priority, period, execution_time):
+        self.name = name
+        self.priority = priority
+        self.period = period
+        self.execution_time = execution_time
+        self.next_run = 0
+        self.deadline = period
+
+tasks = [
+    Task("Sensor Read", 3, 2, 0.3),
+    Task("LED Blink", 2, 1, 0.2),
+    Task("Data Send", 1, 5, 0.5)
+]
+
+SIMULATION_TIME = 15
+current_time = 0
+
+# Store execution timeline
+timeline = []
+
+print("Starting RTOS Scheduler Simulation...\n")
+time.sleep(1)
+
+while current_time < SIMULATION_TIME:
+    clear_output(wait=True)
+
+    ready_tasks = [t for t in tasks if current_time >= t.next_run]
+
+    print(f"TIME: {current_time}s")
+    print("-" * 30)
+
+    if ready_tasks:
+        task = sorted(ready_tasks, key=lambda x: -x.priority)[0]
+
+        print(f"RUNNING: {task.name}")
+        
+        waiting = [t.name for t in ready_tasks if t != task]
+        print(f"WAITING: {', '.join(waiting) if waiting else 'None'}")
+
+        if current_time > task.deadline:
+            print(f"DEADLINE MISSED: {task.name}")
+
+        # Save timeline data
+        timeline.append((task.name, current_time))
+
+        time.sleep(task.execution_time)
+
+        task.next_run = current_time + task.period
+        task.deadline = task.next_run
+    else:
+        print("CPU IDLE")
+        timeline.append(("IDLE", current_time))
+
+    print("-" * 30)
+
+    time.sleep(1)
+    current_time += 1
+
+print("Simulation Finished!")
+
+# ---------------- GRAPH PART ---------------- #
+
+# Prepare data
+task_names = list(set([t[0] for t in timeline]))
+task_names.sort()
+
+y_pos = {name: i for i, name in enumerate(task_names)}
+
+plt.figure()
+
+for task_name, t in timeline:
+    plt.barh(y_pos[task_name], 1, left=t)
+
+plt.yticks(list(y_pos.values()), list(y_pos.keys()))
+plt.xlabel("Time (seconds)")
+plt.ylabel("Tasks")
+plt.title("RTOS Task Scheduling Gantt Chart")
+
+plt.show()
